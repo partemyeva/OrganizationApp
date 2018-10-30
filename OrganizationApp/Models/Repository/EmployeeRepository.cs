@@ -81,14 +81,22 @@ namespace OrganizationApp.Models.Repository
             return Context.Employees;
         }
 
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (Context != null)
+                {
+                    Context.Dispose();
+                    Context = null;
+                }
+            }
+        }
 
         public void Dispose()
         {
-            if (Context != null)
-            {
-                Context.Dispose();
-                Context = null;
-            }
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
 
