@@ -109,10 +109,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\EmployeesControllerLoadTest.cs" />
+    <Compile Include="Utils\CollectionExtension.cs" />
+    <Compile Include="Controllers\EmployeesControllerVolumeTest.cs" />
     <Compile Include="Controllers\EmployeesControllerStressTest.cs" />
     <Compile Include="Controllers\EmployeesControllerTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Controllers\HomeControllerTest.cs" />
+    <Compile Include="Utils\EmployeeGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App.config" />
@@ -121,9 +124,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OrganizationApp\OrganizationApp.csproj">
-      <Project>{0C31FA19-11FC-4FCF-95D7-49E072478C24}</Project>
-      <Name>OrganizationApp</Name>
+    <ProjectReference Include="..\OrganizationApp.Models\OrganizationApp.Models.csproj">
+      <Project>{56f0c9b4-286a-4a5d-baa3-06ecd052fd73}</Project>
+      <Name>OrganizationApp.Models</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

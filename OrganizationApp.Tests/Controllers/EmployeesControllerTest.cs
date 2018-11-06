@@ -16,7 +16,7 @@ namespace OrganizationApp.Tests.Controllers
     [TestFixture]
     public class EmployeesControllerTest
     {
-        string baseUrl;
+        readonly string baseUrl;
 
         public EmployeesControllerTest()
         {

@@ -2,26 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace OrganizationApp.Models.Repository
 {
     public interface IRepository
     {
-        Employee GetByID(int id);
+        Task<Employee> GetByIDAsync(int id);
 
-        void Save(Employee employee);
+        Task<IEnumerable<Employee>> GetEmployeesAsync(EmployeeFilterParams fp);
 
-        void Remove(Employee employee);
+        Task SaveAsync(Employee employee);
 
-        bool Modify(int id, Employee employee);
+        Task RemoveAsync(Employee employee);
 
-        IQueryable<Employee> FilterByPosition(string position, IQueryable<Employee> employees);
-
-        IQueryable<Employee> FilterByAge(int? minAge, int? maxAge, IQueryable<Employee> employees);
-
-        IQueryable<Employee> FilterByExperience(int? minExperience, int? maxExperience, IQueryable<Employee> employees);
-
-        IQueryable<Employee> GetEmployees();
+        Task<bool> ModifyAsync(int id, Employee employee);
 
         bool VerifyEmployeeData(Employee employee);
 

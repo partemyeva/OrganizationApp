@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
 using OrganizationApp.Models;
@@ -21,27 +19,17 @@ namespace OrganizationApp.Controllers
             Repository = r;
         }
 
+        //
         // GET: api/Employees
-        public IQueryable<Employee> GetEmployees([FromUri]EmployeeFilterParams filterParams)
+        public async Task<IEnumerable<Employee>> GetEmployees([FromUri]EmployeeFilterParams filterParams)
         {
-            var employees = Repository.GetEmployees();
-
-            // Фильтруем по должности
-            employees = Repository.FilterByPosition(filterParams.Position, employees);
-
-            // Фильтруем по возрасту
-            employees = Repository.FilterByAge(filterParams.MinAge, filterParams.MaxAge, employees);
-
-            // Фильтруем по опыту работы
-            employees = Repository.FilterByExperience(filterParams.MinExperience, filterParams.MaxExperience, employees);
-
-            return employees;
+            return await Repository.GetEmployeesAsync(filterParams);
         }
 
-              
+        //      
         // PUT: api/Employees/5
         [ResponseType(typeof(void))]
-        public IHttpActionResult PutEmployee(int id, Employee employee)
+        public async Task<IHttpActionResult> PutEmployee(int id, Employee employee)
         {
             if (!ModelState.IsValid)
             {
@@ -59,7 +47,8 @@ namespace OrganizationApp.Controllers
                 return BadRequest();
             }
 
-            var result = Repository.Modify(id, employee);
+            // Изменяем поля сотрудника с идентификатором id
+            var result = await Repository.ModifyAsync(id, employee);
 
             if (!result)
             {
@@ -69,9 +58,10 @@ namespace OrganizationApp.Controllers
             return StatusCode(HttpStatusCode.NoContent);
         }
 
+        //
         // POST: api/Employees
         [ResponseType(typeof(Employee))]
-        public IHttpActionResult PostEmployee(Employee employee)
+        public async Task<IHttpActionResult> PostEmployee(Employee employee)
         {
             if (!ModelState.IsValid )
             {
@@ -84,22 +74,23 @@ namespace OrganizationApp.Controllers
                 return BadRequest();
             }
 
-            Repository.Save(employee);
+            await Repository.SaveAsync(employee);
             
             return CreatedAtRoute("DefaultApi", new { id = employee.ID }, employee);
         }
 
+        //
         // DELETE: api/Employees/5
         [ResponseType(typeof(Employee))]
-        public IHttpActionResult DeleteEmployee(int id)
+        public async Task<IHttpActionResult> DeleteEmployee(int id)
         {
-            var employee = Repository.GetByID(id);
+            var employee = await Repository.GetByIDAsync(id);
             if (employee == null)
             {
                 return NotFound();
             }
 
-            Repository.Remove(employee);
+            await Repository.RemoveAsync(employee);
 
             return Ok(employee);
         }

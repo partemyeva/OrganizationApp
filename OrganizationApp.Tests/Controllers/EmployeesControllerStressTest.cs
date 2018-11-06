@@ -4,20 +4,25 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Configuration;
+using System.Diagnostics;
+using System.Net.Http;
 using NUnit.Framework;
 using OrganizationApp.Models;
-using System.Net.Http;
+using OrganizationApp.Tests.Utils;
+
 
 namespace OrganizationApp.Tests.Controllers
 {
+    [TestFixture]
     public class EmployeesControllerStressTest
     {
-        string baseUrl;
+        readonly string baseUrl;
 
         public EmployeesControllerStressTest()
         {
             baseUrl = $"{ConfigurationManager.AppSettings["BaseUrl"]}employees/";
         }
+
 
         [Test]
         public async Task MultipleAddEmployee()
@@ -27,9 +32,28 @@ namespace OrganizationApp.Tests.Controllers
             using (var client = new HttpClient())
             {
 
+                var employee = new Employee()
+                {
+                    FirstName = "Оксана",
+                    Patronymic = "Сергеевна",
+                    LastName = "Харитонова",
+                    DateOfBirth = new DateTime(1990, 5, 29),
+                    Position = "Бухгалтер",
+                    DateOfEmployment = new DateTime(2015, 11, 30)
+                };
+
+
+                // Отправляем запрос на добавление нового сотрудника
+                var response = await client.PostAsXmlAsync(baseUrl, employee);
+
+                Assert.IsTrue(response.IsSuccessStatusCode);
+
+
+                var stopwatch = Stopwatch.StartNew();
+
                 for (int i = 0; i < count; i++)
                 {
-                    var employee = new Employee()
+                    employee = new Employee()
                     {
                         FirstName = "Оксана",
                         Patronymic = "Сергеевна",
@@ -41,15 +65,85 @@ namespace OrganizationApp.Tests.Controllers
 
 
                     // Отправляем запрос на добавление нового сотрудника
-                    var response = await client.PostAsXmlAsync(baseUrl, employee);
+                    response = await client.PostAsXmlAsync(baseUrl, employee);
 
                     Assert.IsTrue(response.IsSuccessStatusCode);
                 }
+
+                stopwatch.Stop();
+
+                var timePerOperation = (double)(stopwatch.ElapsedMilliseconds) / count;
+
+                Console.WriteLine($"Add operation time: {timePerOperation} ms.");
+            }
+        }
+
+
+        private async Task GetEmployee(HttpClient client, Random rnd)
+        {
+            // Генерируем параметры фильтра
+            var fp = EmployeeGenerator.GetandomEmployeeFilterParams();
+
+            var queryString = EmployeeGenerator.GetQueryString(fp);
+
+            var response = await client.GetAsync($"{baseUrl}?{queryString}");
+
+            // Отправляем запрос на получение сотрудников
+            var employees = await response.Content.ReadAsAsync<IEnumerable<Employee>>();
+
+            Assert.IsTrue(response.IsSuccessStatusCode);
+
+            foreach (var employee in employees)
+            {
+                // Возраст сотрудника должен быть больше или равен minAge ...
+                Assert.GreaterOrEqual(employee.Age, fp.MinAge);
+
+                // ... и строго меньше MaxAge
+                Assert.Less(employee.Age, fp.MaxAge);
+
+                // Опыт работы в компании больше или равен minExperience ...
+                Assert.GreaterOrEqual(employee.Experience, fp.MinExperience);
+
+                // ... и строго меньше maxExperience
+                Assert.Less(employee.Experience, fp.MaxExperience);
+
+                // Должна сопадать должность сотрудника
+                Assert.AreEqual(fp.Position.ToLowerInvariant(), employee.Position.ToLowerInvariant());
+            }
+
+            //Console.Write($"{fp.MinAge} {fp.MaxAge} {fp.MinExperience} {fp.MaxExperience} {fp.Position}\n");
+        }
+
+        [Test]
+        public async Task MultipleGetEmployee()
+        {
+            var count = 1000;
+
+            var rnd = new Random();
+
+            using (var client = new HttpClient())
+            {
+                await GetEmployee(client, rnd);
+
+                var stopwatch = Stopwatch.StartNew();
+
+                for (int i = 0; i < count; i++)
+                {
+
+                    await GetEmployee(client, rnd);
+                }
+
+                stopwatch.Stop();
+
+                var timePerOperation = (double)(stopwatch.ElapsedMilliseconds) / count;
+
+                Console.WriteLine($"Get operation time: {timePerOperation} ms.");
+
             }
         }
 
         [Test]
-        public async Task MultipleDeleteEmployee()
+        public async Task MultipleRemoveEmployee()
         {
             using (var client = new HttpClient())
             {
@@ -63,6 +157,8 @@ namespace OrganizationApp.Tests.Controllers
                 // Сотрудник, которого будем удалять
                 var lastName = "Харитонова";
                 var employeesToDelete = employees.Where(x => x.LastName == lastName);
+                
+                var stopwatch = Stopwatch.StartNew();
 
                 foreach (var employee in employeesToDelete)
                 {
@@ -73,6 +169,12 @@ namespace OrganizationApp.Tests.Controllers
 
                     Assert.IsTrue(response.IsSuccessStatusCode);
                 }
+
+                stopwatch.Stop();
+
+                var timePerOperation = (double)(stopwatch.ElapsedMilliseconds) / employeesToDelete.Count();
+
+                Console.WriteLine($"Delete operation time: {timePerOperation} ms.");
 
                 // Получаем список всех сотрудников
                 getResponse = await client.GetAsync(baseUrl);
@@ -97,6 +199,21 @@ namespace OrganizationApp.Tests.Controllers
                 Assert.IsTrue(response.IsSuccessStatusCode);
                 Assert.IsNotEmpty(employees);
 
+                // Возьмем первого сотрудника
+                var emp = employees.FirstOrDefault();
+
+                // Поменяем дату приема на работу
+                emp.DateOfEmployment = DateTime.Now.AddMonths(-1);
+
+                var url = $"{baseUrl}/{emp.ID}";
+
+                // Запрос на изменение информации о сотруднике
+                response = await client.PutAsJsonAsync(url, emp);
+
+                Assert.IsTrue(response.IsSuccessStatusCode);
+
+                var stopwatch = Stopwatch.StartNew();
+
                 var i = 0;
                 var count = 1000;
                 do
@@ -104,9 +221,9 @@ namespace OrganizationApp.Tests.Controllers
                     foreach (var employee in employees)
                     {
                         // Поменяем дату приема на работу
-                        employee.DateOfEmployment = employee.DateOfEmployment.AddDays(-i);
+                        employee.DateOfEmployment = DateTime.Now.AddDays(-i);
 
-                        var url = $"{baseUrl}/{employee.ID}";
+                        url = $"{baseUrl}/{employee.ID}";
 
                         // Запрос на изменение информации о сотруднике
                         response = await client.PutAsJsonAsync(url, employee);
@@ -116,6 +233,12 @@ namespace OrganizationApp.Tests.Controllers
                         i++;
                     }
                 } while (i < count);
+
+                stopwatch.Stop();
+
+                var timePerOperation = (double)(stopwatch.ElapsedMilliseconds) / count;
+
+                Console.WriteLine($"Modify operation time: {timePerOperation} ms.");
 
             }
         }
